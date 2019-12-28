@@ -31,7 +31,6 @@ public class Console {
 
     private static Console instance;
     public static boolean hasInstance() { return instance != null; }
-    
     public static Console getInstance() {
         if(!hasInstance())
             initialize();
@@ -64,6 +63,9 @@ public class Console {
 	}
 	
 	private void buildConsole() {
+	    if(console != null)
+	        return;
+	    
         console = new JFrame(Version.getVersion() + " Console");
         console.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         console.setContentPane(new JScrollPane(consoleOutput));
@@ -106,7 +108,7 @@ public class Console {
 	 * Will not do anything for non-Windows systems (To my knowledge).
 	 */
 	private void buildTrayIcon() {
-		if(!SystemTray.isSupported() || tray != null)
+		if(tray != null || !SystemTray.isSupported())
 			return;
 		
 		try {
@@ -142,7 +144,7 @@ public class Console {
         menuBar.add(menu);
         
         JMenuItem shutdown = new JMenuItem("Shutdown Bot");
-        shutdown.addActionListener(e -> shutdown());
+        shutdown.addActionListener(e -> shutdownBot());
         menu.add(shutdown);
         
         return menuBar;
@@ -156,12 +158,30 @@ public class Console {
         if (console == null)
             return;
 
-        if (!SystemTray.isSupported() || tray == null) {
-            shutdown();
-        }else {
-            console.dispose();
-            console = null;
+        if (!SystemTray.isSupported() || tray == null)
+            if(!shutdownBot()) 
+                return;
+        
+        console.dispose();
+        console = null;
+        
+        if(DiscordBot.hasInstance())
+            return;
+
+        destroyTray();
+        
+        if(PrintThread.hasInstance()) {
+            PrintThread printer = PrintThread.getInstance();
+
+            out.flush();
+            printer.removeOut(out);
+            printer.removeErr(out);
+            printer.kill();
         }
+        
+        out.close();
+        out = null;
+        consoleOutput = null;
     }
 	
 	public void destroyTray() {
@@ -170,37 +190,38 @@ public class Console {
 		tray = null;
 	}
 	
-	public boolean shutdown() {
-		int res = JOptionPane.showConfirmDialog(console,
-				"Are you sure?", "Shutdown Bot", JOptionPane.YES_NO_OPTION,
-				JOptionPane.QUESTION_MESSAGE);
-		
-		if(res == JOptionPane.YES_OPTION){
-			DiscordBot bot = DiscordBot.getInstance();
-			if(bot != null)
-				bot.shutdown();
-			
-			if(console != null) {
-				console.dispose();
-				console = null;
-			}
-			
-			destroyTray();
-			
-			if(PrintThread.hasInstance()) {
-			    PrintThread printer = PrintThread.getInstance();
+	public boolean shutdownBot() {
+	    return shutdownBot(false);
+	}
+	
+	/**
+	 * @param force Determines whether the user should be prompted for a confirmation or not. force of true will cause no confirmation and immediately shutdown the bot.
+	 * @return Whether the bot has been shutdown or not. Will also return true if the bot has already been shutdown previously.
+	 */
+	public boolean shutdownBot(boolean force) {
+	    if(!DiscordBot.hasInstance()) {
+	        Logger.info("Attempted to shutdown the bot, but it seems to have already been shutdown.");
+	        return true;
+	    }
+	    
+	    if(!force) {
+	        int res = JOptionPane.showConfirmDialog(console,
+	                "Are you sure?", "Shutdown Bot", JOptionPane.YES_NO_OPTION,
+	                JOptionPane.QUESTION_MESSAGE);
+	        
+	        if(res != JOptionPane.YES_OPTION)
+	            return false;   
+	    }
 
-			    printer.removeOut(out);
-			    printer.removeErr(out);
-			    printer.kill();
-			}
-			
-			out = null;
-			consoleOutput = null;
-
-			Logger.info("Goodbye!");
-			return true;
-		}
-		return false;
+        try {
+            DiscordBot.getInstance().shutdown();            
+        }catch(Exception e) {
+            Logger.err("An error occured while attempting to shutdown the bot. It is unsure whether the bot is still running or not. This may cause some unexpected behavior. Please notify the developer.");
+            e.printStackTrace();
+            return false;
+        }
+        
+        Logger.info("The bot has been successfully shutdown! Closing this window will now terminate the program.");
+		return true;
 	}
 }

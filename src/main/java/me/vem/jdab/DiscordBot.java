@@ -21,6 +21,7 @@ import net.dv8tion.jda.api.JDABuilder;
 public class DiscordBot {
 
 	private static DiscordBot instance;
+	public static boolean hasInstance() { return instance != null; }
 	public static DiscordBot getInstance() { return instance; }
 	public static DiscordBot initialize(String token) {
 	    if(instance != null)
@@ -54,6 +55,8 @@ public class DiscordBot {
 		Help.initialize();
 		Prefix.initialize();
 		Uptime.initialize();
+		
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> Logger.info("Final application shutdown event has occurred."), "JDA-Foundation Shutdown Hook"));
 	}
 	
 	public void addEventListener(Object listener) {
