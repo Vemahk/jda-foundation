@@ -2,6 +2,7 @@ package me.vem.jdab.cmd;
 
 import me.vem.jdab.utils.Respond;
 import me.vem.jdab.utils.Utilities;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
 public class Uptime extends Command{
@@ -45,7 +46,7 @@ public class Uptime extends Command{
 	}
 
 	@Override
-	public boolean hasPermissions(GuildMessageReceivedEvent event, String... args) {
+	public boolean hasPermissions(Member member, String... args) {
 		return true;
 	}
 

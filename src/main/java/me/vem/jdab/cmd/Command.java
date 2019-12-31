@@ -9,6 +9,7 @@ import me.vem.jdab.DiscordBot;
 import me.vem.jdab.utils.Logger;
 import me.vem.jdab.utils.Respond;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.EventListener;
@@ -99,7 +100,7 @@ public abstract class Command {
 	 * @param args The command arguments.
 	 * @return true if the member given in the event has sufficient permissions to run this command/sub-command. False otherwise.
 	 */
-	public abstract boolean hasPermissions(GuildMessageReceivedEvent event, String... args);
+	public abstract boolean hasPermissions(Member member, String... args);
 	
 	/**
 	 * Required postcondition: The command can be reloaded after this method is called.
@@ -117,7 +118,7 @@ public abstract class Command {
 	 * For example: if the user calls the command correctly but lacks permissions, then it fails to do what the user intented, so it would return false.
 	 */
 	public boolean run(GuildMessageReceivedEvent event, String... args) {
-		if(!hasPermissions(event, args)) {
+		if(!hasPermissions(event.getMember(), args)) {
 			Respond.async(event.getChannel(), "You do not have the permissions to run this command.");
 			return false;
 		}
