@@ -72,11 +72,24 @@ public abstract class Command {
 				((Configurable)cmd).save();
 	}
 	
+	private final Command parentCommand;
+	private final List<Command> subCommands;
+	
 	private final String name;
 	
-	protected Command(String cmdname) {
-		this.name = cmdname;
-		addCommand(this);
+	protected Command(String cmdName) {
+	    this(cmdName, null);
+	}
+	
+	protected Command(String cmdName, Command parentCommand) {
+	    this.parentCommand = parentCommand;
+	    this.subCommands = new LinkedList<>();
+	    
+		this.name = cmdName;
+		
+		if(parentCommand == null)
+		    addCommand(this);
+		else parentCommand.registerSubCommand(this);
 	}
 	
 	/**
@@ -148,7 +161,31 @@ public abstract class Command {
 		return successful;
 	}
 	
+	protected Command getParentInstance() {
+	    return parentCommand;
+	}
+	
+	protected Command getSubCommand(String cmdName) {
+        if(cmdName == null || cmdName.isEmpty())
+            return null;
+        
+        for(Command c : subCommands)
+            if(c.name.equals(cmdName))
+                return c;
+        
+        return null;
+    }
+	
 	protected String getName() {
 		return name;
+	}
+	
+	private void registerSubCommand(Command cmd) {
+	    for(Command c : subCommands)
+            if(c.name.equals(cmd.name)) {
+                Logger.warnf("Cannot register '%s' as a subcommand of '%s' because another subcommand with its name (%s) has already been registered.", cmd.getClass().getName(), this.getClass().getName(), cmd.getName());
+                return;
+            }
+	    subCommands.add(cmd);
 	}
 }
