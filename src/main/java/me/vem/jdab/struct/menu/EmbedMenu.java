@@ -1,16 +1,17 @@
 package me.vem.jdab.struct.menu;
 
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.MessageChannel;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 
 public abstract class EmbedMenu extends Menu{
 
-	public EmbedMenu(Message msg) { super(msg); }
-	public EmbedMenu(Message msg, int page) { super(msg, page); }
-	public EmbedMenu(Message msg, int page, boolean closable) { super(msg, page, closable); }
+	public EmbedMenu(MessageChannel channel) { super(channel); }
+	public EmbedMenu(MessageChannel channel, int page) { super(channel, page); }
+	public EmbedMenu(MessageChannel channel, int page, boolean closable) { super(channel, page, closable); }
 	
 	@Override
-	protected void update() {
+	protected void update(Message msg) {
 		msg.editMessage(getEmbed(getPage())).queue();
 	}
 	

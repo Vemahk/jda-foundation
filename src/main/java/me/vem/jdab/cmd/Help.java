@@ -7,7 +7,7 @@ import me.vem.jdab.struct.menu.EmbedMenu;
 import me.vem.jdab.utils.Respond;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.MessageChannel;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
@@ -20,9 +20,7 @@ public class Help extends Command{
 			instance = new Help();
 	} 
 
-	
 	private Help() { super("help"); }
-
 	
 	@Override
 	public boolean run(GuildMessageReceivedEvent event, String... args) {
@@ -30,45 +28,20 @@ public class Help extends Command{
 		
 		if(args.length == 0) {
 			//WHAT'S THIS?! CALLBACK HELL?!
-			event.getAuthor().openPrivateChannel().queue((pc) -> {
-			    pc.sendMessage(getCommandList(1).build()).queue((msg) -> new HelpMenu(msg));
-			}, (fail) -> {
-			    Respond.async(event.getChannel(), getCommandList(1).build(), (msg) -> new HelpMenu(msg));
-			});
+			event.getAuthor().openPrivateChannel().queue(
+		        (pc) -> new HelpMenu(pc),
+		        (fail) -> new HelpMenu(event.getChannel())
+			);
 			return true;
 		}
 		
 		Command cmd = Command.getCommand(args[0]);
 		if(cmd != null) cmd.sendHelp(event.getChannel(), true);
-		else new HelpMenu(Respond.sync(event.getChannel(), getCommandList(1).appendDescription(" - Command not recognized.")));
+		else Respond.asyncf(event.getChannel(), "Command `%s` not recognized.", args[0]);;
 		
 		event.getMessage().delete().queue();
 		
 		return true;
-	}
-	
-	private EmbedBuilder getCommandList(int page) {
-		EmbedBuilder builder = new EmbedBuilder().setColor(Color.RED).setTitle("Help - Page " + page);
-		
-		if(page < 1)
-			return builder.addField("No such page", "", false);
-		
-		Iterator<Command> iter = Command.getIter();
-		for(int i=0; i < (page - 1) * 5;i++, iter.next())
-			if(!iter.hasNext())
-				return builder.addField("No such page", "", false);
-		
-		for(int x=0;x<5;x++) {
-			if(!iter.hasNext()) {
-				if(x == 0)
-					return builder.addField("No such page", "", false);
-				break;
-			}
-			Command nxt = iter.next();
-			builder.addField(nxt.getName(), nxt.getDescription(), false);
-		}
-		
-		return builder.setColor(Color.GREEN);
 	}
 	
 	@Override
@@ -96,13 +69,37 @@ public class Help extends Command{
 	}
 	
 	private class HelpMenu extends EmbedMenu{
-		public HelpMenu(Message msg) {
-			super(msg);
+		public HelpMenu(MessageChannel channel) {
+			super(channel);
 		}
 
 		@Override
 		public MessageEmbed getEmbed(int page) {
-			return getCommandList(page).build();
+			return getPage(page);
 		}
+	    
+	    private MessageEmbed getPage(int page) {
+	        EmbedBuilder builder = new EmbedBuilder().setColor(Color.RED).setTitle("Help - Page " + page);
+	        
+	        if(page < 1)
+	            return builder.addField("No such page", "", false).build();
+	        
+	        Iterator<Command> iter = Command.getIter();
+	        for(int i=0; i < (page - 1) * 5;i++, iter.next())
+	            if(!iter.hasNext())
+	                return builder.addField("No such page", "", false).build();
+	        
+	        for(int x=0;x<5;x++) {
+	            if(!iter.hasNext()) {
+	                if(x == 0)
+	                    return builder.addField("No such page", "", false).build();
+	                break;
+	            }
+	            Command nxt = iter.next();
+	            builder.addField(nxt.getName(), nxt.getDescription(), false);
+	        }
+	        
+	        return builder.setColor(Color.GREEN).build();
+	    }
 	}
 }

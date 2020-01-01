@@ -2,25 +2,35 @@ package me.vem.jdab.struct.menu;
 
 import me.vem.jdab.listener.MenuListener;
 import me.vem.jdab.utils.emoji.Emojis;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.MessageChannel;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 
 public abstract class Menu {
-	protected final Message msg;
+	private Message msg;
 	private int page;
 
-	public Menu(Message msg) { this(msg, 1, true); }
-	public Menu(Message msg, int page) { this(msg, page, true); }
+	public Menu(MessageChannel channel) { this(channel, 1, true); }
+	public Menu(MessageChannel channel, int page) { this(channel, page, true); }
 	
-	public Menu(Message msg, int page, boolean closable) {
+	public Menu(MessageChannel channel, int page, boolean closable) {
 		this.page = page;
-		this.msg = msg;
 		
-		msg.addReaction(Emojis.LEFT_ARROW.toString()).queue();
-		msg.addReaction(Emojis.RIGHT_ARROW.toString()).queue();
-		if(closable)
-			msg.addReaction(Emojis.XMARK.toString()).queue();
-
-		MenuListener.getInstance().add(this);
+		MessageEmbed loading = new EmbedBuilder().setTitle("Loading Menu...").build();
+		Message message = new MessageBuilder().setEmbed(loading).build();
+		channel.sendMessage(message).queue(msg -> {
+	        this.msg = msg;
+	        
+	        update(msg);
+	        msg.addReaction(Emojis.LEFT_ARROW.toString()).queue();
+	        msg.addReaction(Emojis.RIGHT_ARROW.toString()).queue();
+	        if(closable)
+	            msg.addReaction(Emojis.XMARK.toString()).queue();
+	        
+	        MenuListener.getInstance().add(this);
+		});
 	}
 	
 	/**
@@ -28,7 +38,7 @@ public abstract class Menu {
 	 * Additional note: setPage(), nextPage(), and prevPage() all call update() at the end of their method call.
 	 * Therefore, the idea is that update refreshes the {@code msg} with the newly set page.
 	 */
-	protected abstract void update();
+	protected abstract void update(Message msg);
 
 	private boolean isScheduled = false;
 	/**
@@ -46,34 +56,47 @@ public abstract class Menu {
 	}
 	
 	public int getPage() { return page; }
+	public boolean isInitialized() { return msg != null; }
 	
-	/**
-	 * @param l A snowflake ID.
-	 * @return true if the passed long matches the snowflake id of the message of this menu.
-	 */
-	public boolean matches(long l) {
-		return l == msg.getIdLong();
+	public long getMessageId() {
+        if(msg == null)
+            throw new IllegalStateException("Menu has not yet been initialized or is no longer valid.");
+        
+	    return msg.getIdLong();
 	}
 	
 	public void setPage(int page) {
+        if(msg == null)
+            throw new IllegalStateException("Menu has not yet been initialized or is no longer valid.");
+	    
 		this.page = page;
-		update();
+		update(msg);
 	}
 	
 	public void nextPage() {
+	    if(msg == null)
+            throw new IllegalStateException("Menu has not yet been initialized or is no longer valid.");
+        
 		page++;
-		update();
+		update(msg);
 	}
 	
 	public void prevPage() {
+	    if(msg == null)
+            throw new IllegalStateException("Menu has not yet been initialized or is no longer valid.");
+        
 		if(page == 1)
 			return;
+		
 		page--;
-		update();
+		update(msg);
 	}
 	
 	public void destroy() {
-		//The reason for the lambdas it to quiet errors of it not existing... In case third parties delete it before it can delete itself.
-		msg.delete().queue((success) -> {}, (failure) -> {});
+	    if(msg == null)
+            throw new IllegalStateException("Menu has not yet been initialized or is no longer valid.");
+        
+		msg.delete().queue();
+		msg = null;
 	}
 }

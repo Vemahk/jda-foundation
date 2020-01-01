@@ -1,8 +1,7 @@
 package me.vem.jdab.listener;
 
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Timer;
 
 import me.vem.jdab.struct.Task;
@@ -28,21 +27,21 @@ public class MenuListener implements EventListener{
 			return;
 		
 		instance.timeout.cancel();
-		Iterator<Menu> iter = instance.openMenues.iterator();
-		while(iter.hasNext()) {
-			iter.next().destroy();
-			iter.remove();
-		}
+		
+		for(Menu menu : instance.openMenues.values())
+            menu.destroy();
+		
+		instance.openMenues.clear();
 		
 		instance = null;
 	}
 	
-	private final List<Menu> openMenues;
+	private final Map<Long, Menu> openMenues;
 	private final Timer timeout;
 	
 	private MenuListener() {
 		timeout = new Timer("Menu Timer");
-		openMenues = new LinkedList<>();
+		openMenues = new HashMap<>();
 	}
 	
 	/**
@@ -52,18 +51,26 @@ public class MenuListener implements EventListener{
 	 */
 	public void timeout(Menu menu, int delay) {
 		timeout.schedule(new Task(() -> {
-			menu.destroy();
-			MenuListener.this.openMenues.remove(menu);
+            if(!menu.isInitialized()) 
+                return;
+            
+            MenuListener.this.remove(menu);
+            menu.destroy();
 		}), delay);
 	}
 	
-	public void add(Menu m) {
-		if(!openMenues.contains(m))
-			openMenues.add(m);
+	public Menu add(Menu m) {
+	    if(!m.isInitialized())
+	        throw new IllegalArgumentException("Cannot listen for an uninitialized menu!");
+	    
+		return openMenues.put(m.getMessageId(), m);
 	}
 	
 	public void remove(Menu m) {
-		openMenues.remove(m);
+        if(!m.isInitialized())
+            throw new IllegalArgumentException("Cannot remove menu! Menu is uninitialized, and thus I cannot retrieve the message's snowflake-id.");
+	    
+		openMenues.remove(m.getMessageId());
 	}
 	
 	@Override
@@ -78,39 +85,35 @@ public class MenuListener implements EventListener{
 		if(event.getUser().equals(event.getJDA().getSelfUser()))
 			return;
 		
+		Menu menu = openMenues.get(event.getMessageIdLong());
+		if(menu == null)
+		    return;
+		
 		Emoji reaction = new Emoji(event.getReactionEmote());
 		
-		if(reaction.equals(Emojis.LEFT_ARROW) || reaction.equals(Emojis.RIGHT_ARROW)){
-			for(Menu menu : openMenues)
-				if(menu.matches(event.getMessageIdLong()))
-					if(reaction.equals(Emojis.LEFT_ARROW))
-						menu.prevPage();
-					else menu.nextPage();
-		}else if(reaction.equals(Emojis.XMARK)){
-			Iterator<Menu> iter = openMenues.iterator();
-			while(iter.hasNext()) {
-				Menu next = iter.next();
-				if(next.matches(event.getMessageIdLong())) {
-					next.destroy();
-					iter.remove();
-					break;
-				}
-			}
+		if(reaction.equals(Emojis.LEFT_ARROW))
+			menu.prevPage();
+		else if(reaction.equals(Emojis.RIGHT_ARROW))
+		    menu.nextPage();
+		else if(reaction.equals(Emojis.XMARK)){
+		    remove(menu);
+            menu.destroy();
 		}
 	}
 	
 	private void remReaction(MessageReactionRemoveEvent event) {
 		if(event.getUser().equals(event.getJDA().getSelfUser()))
 			return;
+        
+        Menu menu = openMenues.get(event.getMessageIdLong());
+        if(menu == null)
+            return;
 		
 		Emoji reaction = new Emoji(event.getReactionEmote());
 		
-		//Look, ma! No brackets!
-		if(reaction.equals(Emojis.LEFT_ARROW) || reaction.equals(Emojis.RIGHT_ARROW))
-			for(Menu menu : openMenues)
-				if(menu.matches(event.getMessageIdLong()))
-					if(reaction.equals(Emojis.LEFT_ARROW))
-						menu.prevPage();
-					else menu.nextPage();
+		if(reaction.equals(Emojis.LEFT_ARROW))
+			menu.prevPage();
+		else if(reaction.equals(Emojis.RIGHT_ARROW))
+		    menu.nextPage();
 	}
 }
