@@ -4,6 +4,9 @@ import java.awt.Color;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Stack;
+import java.util.function.Predicate;
 
 import me.vem.jdab.DiscordBot;
 import me.vem.jdab.utils.Logger;
@@ -16,7 +19,43 @@ import net.dv8tion.jda.api.hooks.EventListener;
 
 public abstract class Command {
 
-	private static List<Command> commands = new LinkedList<>();
+	private static List<Command> commands = new LinkedList<Command>() {
+        private static final long serialVersionUID = -5452155871389714051L;
+        
+        @Override
+        public Iterator<Command> iterator(){
+            return new Iterator<Command>() {
+                private Stack<Iterator<Command>> iterStack = new Stack<>();
+                private Iterator<Command> curIter = listIterator();
+                
+                @Override
+                public boolean hasNext() {
+                    while(!curIter.hasNext() && !iterStack.isEmpty())
+                        curIter = iterStack.pop();
+                    
+                    return curIter.hasNext();
+                }
+
+                @Override
+                public Command next() {
+                    if(!hasNext())
+                        throw new NoSuchElementException();
+                    
+                    Command next = curIter.next();
+                    Iterator<Command> subCmdIter = next.getSubCommandIterator();
+                    
+                    if(subCmdIter.hasNext()) {
+                        iterStack.push(curIter);
+                        curIter = subCmdIter;
+                    }
+                    
+                    //Logger.debugf("CMD List Iterator > %s", next.getFullName());
+                    
+                    return next;
+                }
+            };
+        }
+	};
 	
 	/**
 	 * O(n) b/c I am figuring that there won't be an insane amount of commands being registered, so screw efficiency.
@@ -51,7 +90,50 @@ public abstract class Command {
 	}
 	
 	public static Iterator<Command> getIter(){
-		return commands.iterator();
+		return getIter(null);
+	}
+	
+	public static Iterator<Command> getIter(Predicate<Command> filter){
+	    Iterator<Command> baseIter = commands.iterator();
+	    if(filter == null)
+	        return baseIter;
+	    
+	    return new Iterator<Command>() {
+	        private Command next;
+	        
+            @Override
+            public boolean hasNext() {
+                if(next == null)
+                    return calcNext() != null;
+                
+                return true;
+            }
+
+            @Override
+            public Command next() {
+                if(next == null && calcNext() == null)
+                    throw new NoSuchElementException();
+                
+                Command ret = next;
+                calcNext();
+                return ret;
+            }
+	        
+            private Command calcNext() {
+                if(!baseIter.hasNext())
+                    return next = null;
+                
+                Command potentialNext = baseIter.next();
+                
+                while(!filter.test(potentialNext)) {
+                    if(baseIter.hasNext())
+                        potentialNext = baseIter.next();
+                    else return next = null;
+                }
+                
+                return next = potentialNext;
+            }
+	    };
 	}
 	
 	/**
@@ -176,8 +258,18 @@ public abstract class Command {
         return null;
     }
 	
+	protected String getFullName() {
+	    if(parentCommand == null)
+	        return getName();
+	    return parentCommand.getFullName() + "." + getName();
+	}
+	
 	protected String getName() {
 		return name;
+	}
+	
+	private Iterator<Command> getSubCommandIterator(){
+	    return subCommands.iterator();
 	}
 	
 	private void registerSubCommand(Command cmd) {

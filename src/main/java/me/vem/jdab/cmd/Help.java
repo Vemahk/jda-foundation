@@ -2,6 +2,7 @@ package me.vem.jdab.cmd;
 
 import java.awt.Color;
 import java.util.Iterator;
+import java.util.function.Predicate;
 
 import me.vem.jdab.struct.menu.EmbedMenu;
 import me.vem.jdab.utils.Respond;
@@ -18,19 +19,23 @@ public class Help extends Command{
 	public static void initialize() {
 		if(instance == null)
 			instance = new Help();
-	} 
-
+	}
+	
 	private Help() { super("help"); }
 	
 	@Override
 	public boolean run(GuildMessageReceivedEvent event, String... args) {
 		if(!super.run(event, args)) return false;
 		
+		final Predicate<Command> PERMISSIONS_CHECK = (cmd) -> {
+	        return cmd.hasPermissions(event.getMember());
+	    };
+		
 		if(args.length == 0) {
 			//WHAT'S THIS?! CALLBACK HELL?!
 			event.getAuthor().openPrivateChannel().queue(
-		        (pc) -> new HelpMenu(pc),
-		        (fail) -> new HelpMenu(event.getChannel())
+		        (pc) -> new HelpMenu(pc, PERMISSIONS_CHECK),
+		        (fail) -> new HelpMenu(event.getChannel(), PERMISSIONS_CHECK)
 			);
 			return true;
 		}
@@ -69,8 +74,15 @@ public class Help extends Command{
 	}
 	
 	private class HelpMenu extends EmbedMenu{
+	    private Predicate<Command> filter;
+	    
 		public HelpMenu(MessageChannel channel) {
 			super(channel);
+		}
+		
+		public HelpMenu(MessageChannel channel, Predicate<Command> filter) {
+		    super(channel);
+		    this.filter = filter;
 		}
 
 		@Override
@@ -84,10 +96,11 @@ public class Help extends Command{
 	        if(page < 1)
 	            return builder.addField("No such page", "", false).build();
 	        
-	        Iterator<Command> iter = Command.getIter();
-	        for(int i=0; i < (page - 1) * 5;i++, iter.next())
+	        Iterator<Command> iter = Command.getIter(filter);
+	        for(int i=0; i < (page - 1) * 5;i++, iter.next()) {
 	            if(!iter.hasNext())
 	                return builder.addField("No such page", "", false).build();
+	        }
 	        
 	        for(int x=0;x<5;x++) {
 	            if(!iter.hasNext()) {
@@ -96,7 +109,7 @@ public class Help extends Command{
 	                break;
 	            }
 	            Command nxt = iter.next();
-	            builder.addField(nxt.getName(), nxt.getDescription(), false);
+	            builder.addField(nxt.getFullName(), nxt.getDescription(), false);
 	        }
 	        
 	        return builder.setColor(Color.GREEN).build();
