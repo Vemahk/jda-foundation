@@ -61,9 +61,9 @@ public abstract class Command {
 	 * O(n) b/c I am figuring that there won't be an insane amount of commands being registered, so screw efficiency.
 	 * @param cmd
 	 */
-	private static void addCommand(Command cmd) {
+	private static void addRootCommand(Command cmd) {
 		for(Command c : commands)
-			if(c.name.equals(cmd.name)) {
+			if(c.getFullName().equals(cmd.getName())) {
 				Logger.warnf("Cannot register command '%s' because another command with its name has already been registered.", cmd.getClass().getName());
 				return;
 			}
@@ -75,8 +75,9 @@ public abstract class Command {
 			return null;
 		
 		for(Command c : commands)
-			if(c.name.equals(cmdname))
+			if(c.getFullName().equals(cmdname))
 				return c;
+		
 		return null;
 	}
 	
@@ -170,7 +171,7 @@ public abstract class Command {
 		this.name = cmdName;
 		
 		if(parentCommand == null)
-		    addCommand(this);
+		    addRootCommand(this);
 		else parentCommand.registerSubCommand(this);
 	}
 	

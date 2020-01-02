@@ -1,6 +1,9 @@
 package me.vem.jdab.cmd.test;
 
+import java.util.Arrays;
+
 import me.vem.jdab.cmd.Command;
+import me.vem.jdab.utils.Respond;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
@@ -23,6 +26,16 @@ public class TestSubCommands extends Command{
     @Override
     public boolean run(GuildMessageReceivedEvent event, String... args) {
         if(!super.run(event, args)) return false;
+
+        if(args.length == 0)
+            Respond.async(event.getChannel(), "Yep, you can run this. Shush, child.");
+        else {
+            Command subCmd = this.getSubCommand(args[0]);
+            if(subCmd != null) {
+                String[] subArgs = Arrays.copyOfRange(args, 1, args.length);
+                return subCmd.run(event, subArgs);
+            }
+        }
         
         return true;
     }
@@ -65,6 +78,8 @@ class TestSubCommand extends Command{
     @Override
     public boolean run(GuildMessageReceivedEvent event, String... args) {
         if(!super.run(event, args)) return false;
+        
+        Respond.async(event.getChannel(), "This is the 'ni' sub command!");
         
         return true;
     }
@@ -110,6 +125,8 @@ class TestHiddenSubCommand extends Command{
     @Override
     public boolean run(GuildMessageReceivedEvent event, String... args) {
         if(!super.run(event, args)) return false;
+        
+        Respond.async(event.getChannel(), "This is the 'nu' sub command!");
         
         return true;
     }
