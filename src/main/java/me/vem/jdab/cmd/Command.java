@@ -248,14 +248,14 @@ public abstract class Command {
 	    return parentCommand;
 	}
 	
-	protected Command getSubCommand(String cmdName) {
-        if(cmdName == null || cmdName.isEmpty())
+    protected Command getSubCommand(String cmdName) {
+        if (cmdName == null || cmdName.isEmpty())
             return null;
-        
-        for(Command c : subCommands)
-            if(c.name.equals(cmdName))
+
+        for (Command c : subCommands)
+            if (c.name.equals(cmdName))
                 return c;
-        
+
         return null;
     }
 	
