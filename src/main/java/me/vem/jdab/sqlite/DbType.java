@@ -39,7 +39,7 @@ public enum DbType {
             }
         }
         
-        throw new IllegalArgumentException("Could not convert '" + o.toString() + "' to a DbType.");
+        throw new IllegalArgumentException("Could not convert '" + o.getClass().getName() + "' to a DbType.");
     }
     
     private DbType() {}

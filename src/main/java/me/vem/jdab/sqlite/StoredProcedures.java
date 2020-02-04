@@ -1,6 +1,5 @@
 package me.vem.jdab.sqlite;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
@@ -15,12 +14,16 @@ public class StoredProcedures {
         if(tableEnsured) return;
         
         String sql = "CREATE TABLE IF NOT EXISTS " + SPROC_TABLE + "("
-                    + "sproc_id INTEGER PRIMARY KEY, "
-                    + "sproc_nm TEXT NOT NULL, "
-                    + "sproc TEXT NOT NULL"
-                   + ");";
+                   + "sproc_id INTEGER PRIMARY KEY, "
+                   + "sproc_nm TEXT NOT NULL, "
+                   + "sproc TEXT NOT NULL"
+                   + "); ";
         
-        DatabaseManager.execNonQuery(sql);
+        DbHelper.execNonQuery(sql);
+        
+        sql = "CREATE UNIQUE INDEX IF NOT EXISTS idx_sproc_nm ON " + SPROC_TABLE + " (sproc_nm);";
+        DbHelper.execNonQuery(sql);
+        
         tableEnsured = true;
     }
     
@@ -32,9 +35,13 @@ public class StoredProcedures {
     public static String get(String sprocName) {
         ensureSprocTable();
         
+        Object result = DbHelper.execScalar("SELECT sproc FROM " + SPROC_TABLE + " WHERE sproc_nm = @sproc_name LIMIT 1",
+        		new DbInParameter("@sproc_name", sprocName));
         
+        if(result == null)
+        	throw new IllegalArgumentException("No sproc exists by the name: " + sprocName);
         
-        return null;
+        return (String)result;
     }
     
     /**
@@ -46,28 +53,27 @@ public class StoredProcedures {
     public static int create(String sprocName, String sql) throws SQLException {
         ensureSprocTable();
         
-        String insertSql = ""//TODO
-                + "SELECT last_insert_rowid();";
+        String insertSql = "INSERT INTO " + SPROC_TABLE + " (sproc_nm, sproc) "
+        				 + "SELECT @sproc_nm, @sproc_sql "
+        				 + "WHERE NOT EXISTS (SELECT * FROM " + SPROC_TABLE + " WHERE sproc_nm = @sproc_nm);";
         
-        Object res = DatabaseManager.execScalar(insertSql, sprocName, sql);
+        DbHelper.execNonQuery(insertSql, 
+        		new DbInParameter("@sproc_nm", sprocName), 
+        		new DbInParameter("@sproc_sql", sql));
+        
+        Object res = DbHelper.execScalar("SELECT last_insert_rowid();");
         
         if(res == null) 
-            throw new SQLException("An error occured while created the sproc: " + sprocName);
+            throw new SQLException("An error occured while created the sproc: " + sprocName + ". It may already exist.");
         
-        Integer id = (Integer) res;
-        
-        return id;
+        return (Integer) res;
     }
     
-    public static void execNonQuery(String sprocName) {
-        DatabaseManager.execNonQuery(get(sprocName));
+    public static void execNonQuery(String sprocName, DbInParameter... params) {
+        DbHelper.execNonQuery(get(sprocName), params);
     }
     
-    public static Object execScalar(String sprocName) {
-        return DatabaseManager.execScalar(get(sprocName));
-    }
-    
-    public static ResultSet execResultSet(String sprocName) {
-        return DatabaseManager.execResultSet(get(sprocName));
+    public static Object execScalar(String sprocName, DbInParameter... params) {
+        return DbHelper.execScalar(get(sprocName), params);
     }
 }
