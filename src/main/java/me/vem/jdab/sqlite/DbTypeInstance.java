@@ -37,6 +37,8 @@ public class DbTypeInstance {
             if(!(obj instanceof byte[]))
                 throw new IllegalArgumentException("For DbType 'BLOB', wrapped object must either be of type byte[]. For converting a File to a byte[], see Files.readAllBytes().");
             break;
+        case DYNAMIC:
+        	throw new IllegalArgumentException("For DbType 'DYNAMIC', cannot wrap objects as a DbTypeInstance. DYNAMIC is used for describing table column.");
         }
     }
     

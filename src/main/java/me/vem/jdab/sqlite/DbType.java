@@ -11,7 +11,8 @@ public enum DbType {
     INTEGER, 
     REAL, 
     TEXT, 
-    BLOB;
+    BLOB,
+    DYNAMIC;
     
     public static DbTypeInstance wrap(Object o) {
         if(o == null)
@@ -46,14 +47,13 @@ public enum DbType {
     
     public DbTypeInstance instance() {
         switch(this) {
-        case NULL: return instance(null);
-        case INTEGER: return instance(0);
-        case REAL: return instance(0.0);
-        case TEXT: return instance("");
-        case BLOB: return instance(new byte[0]);
+	        case NULL: return instance(null);
+	        case INTEGER: return instance(0);
+	        case REAL: return instance(0.0);
+	        case TEXT: return instance("");
+	        case BLOB: return instance(new byte[0]);
+	        default: throw new IllegalArgumentException("Cannot create instance of DbType: " + this.toString());
         }
-        
-        throw new IllegalStateException("No current default mapping exists for DbType '" + this.toString() + "'.");
     }
     
     public DbTypeInstance instance(Object o) {

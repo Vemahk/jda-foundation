@@ -19,7 +19,6 @@ public class WhenUsingSprocs {
 		db = SqliteDatabase.create();
 		
 		DbHelper.execNonQuery("DROP TABLE IF EXISTS stored_procedures");
-		DbHelper.execNonQuery("DROP TABLE IF EXISTS sproc_test_tbl");
 		
 		String tblSql = "CREATE TABLE IF NOT EXISTS sproc_test_tbl("
 				+ "rec_id INTEGER PRIMARY KEY, "
