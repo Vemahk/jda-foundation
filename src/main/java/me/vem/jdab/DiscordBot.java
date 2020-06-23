@@ -38,7 +38,7 @@ public class DiscordBot {
 	private DiscordBot(String token) {
 		try {
 			//Look at this trash. Don't be like me.
-			(jda = new JDABuilder(token)
+			(jda = JDABuilder.createDefault(token)
 					.addEventListeners(CommandListener.getInstance())
 					.build().awaitReady())
 					.setAutoReconnect(true);
