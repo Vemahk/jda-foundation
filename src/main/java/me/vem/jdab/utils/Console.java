@@ -3,6 +3,7 @@ package me.vem.jdab.utils;
 import java.awt.AWTException;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.SystemTray;
 import java.awt.TrayIcon;
@@ -38,11 +39,17 @@ public class Console {
         return instance;
     }
     
-    public static void initialize() {
+    public static boolean initialize() {
+        if(GraphicsEnvironment.isHeadless()) {
+            System.out.println("Headless environment detected.");
+            return false;
+        }
+        
         if(hasInstance())
             throw new IllegalStateException("Attempted to initialize Console even though it has already been initialized.");
         
         instance = new Console();
+        return true;
     }
     
     //JFrame Elements
